@@ -1,13 +1,13 @@
-# @tangerie/canva-markup
+# @thecavillgroup/canva-markup
 
 Parser, validator and serialiser for Canva Bridge page markup, a strict HTML subset that maps 1:1 onto Canva elements.
 
 ```
-deno add jsr:@tangerie/canva-markup
+deno add jsr:@thecavillgroup/canva-markup
 ```
 
 ```ts
-import { checkAgainstBase, parsePage, serialisePage } from "@tangerie/canva-markup";
+import { checkAgainstBase, parsePage, serialisePage } from "@thecavillgroup/canva-markup";
 
 const base = parsePage(`<page width="800" height="600">
   <div data-id="r1" style="position:absolute; left:0px; top:0px; width:100px; height:100px; background-color:#000000"></div>
