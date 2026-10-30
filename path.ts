@@ -1,4 +1,4 @@
-import { fmt } from "./css.ts";
+import { fmt } from "./css/mod.ts";
 
 // SVG path validation for Canva shapes. Canva rejects quadratic curves (Q/T), so paths that use
 // them are rewritten to absolute cubic form: exact, not an approximation.

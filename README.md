@@ -19,3 +19,5 @@ console.log(next.issues, checkAgainstBase(base.doc, next.doc!));
 ```
 
 `parsePage`, `serialisePage`/`serialiseNode`, `checkAgainstBase`/`flattenIds`, plus the page model types (`PageDoc`, `Node`, `Issue`) and the shape path helpers.
+
+The markup spec is in [docs/MARKUP.md](docs/MARKUP.md).

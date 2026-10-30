@@ -1,5 +1,5 @@
-import { fmt, serialiseStyle } from "./css.ts";
-import { DEFAULT_INLINE, DEFAULT_PARAGRAPH } from "./validate.ts";
+import { fmt, serialiseStyle } from "./css/mod.ts";
+import { DEFAULT_INLINE, DEFAULT_PARAGRAPH } from "./parse/mod.ts";
 import { FONT_ALIASES, type InlineFormat, type Node, type PageDoc, type Paragraph, type Run, type StyleMap } from "./types.ts";
 
 // Canonical markup: fixed attribute and style order, explicit paragraph styles, 2-space indent.

@@ -80,6 +80,7 @@ const CASES : Array<Case> = [
     { name: "font-size em", src: wrap(`<p style="font-size:2em">x</p>`), code: "invalid_value" },
     { name: "http src", src: wrap(`<img src="http://x.com/a.jpg" style="width:1px; height:1px">`), code: "invalid_value", property: "src", fix: true },
     { name: "data: src", src: wrap(`<img src="data:image/png;base64,AA" style="width:1px; height:1px">`), code: "invalid_value", fix: true },
+    { name: "http href", src: wrap(`<p><a href="http://x.com">x</a></p>`), code: "invalid_value", property: "href", fix: true },
     { name: "javascript href", src: wrap(`<p><a href="javascript:alert(1)">x</a></p>`), code: "invalid_value", property: "href" },
     { name: "bad path", src: wrap(`<svg viewBox="0 0 1 1" style="width:1px"><path d="M0 0 X 1"/></svg>`), code: "invalid_value", property: "d" },
 

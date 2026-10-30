@@ -1,4 +1,4 @@
-import type { Issue } from "./types.ts";
+import type { Issue } from "../types.ts";
 
 // Minimal, strict HTML tokenizer for the markup subset. No DOM, no recovery heuristics beyond
 // closing to the nearest matching open tag.

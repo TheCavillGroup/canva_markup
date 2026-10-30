@@ -1,5 +1,5 @@
-// Normalised page model shared by the server (validation) and the Canva app (compiler/serialiser).
-// Plain TS only: no Deno or DOM globals, so the app bundler can import it directly.
+// Normalised page model produced by the parser and consumed by the serialiser and base checks.
+// Plain TS only: no Deno or DOM globals, so a browser bundle can import it directly.
 
 /** Every code an {@link Issue} can carry */
 export const ISSUE_CODES = [

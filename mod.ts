@@ -22,8 +22,8 @@
  * @module
  */
 export * from "./types.ts";
-export { parsePage, DEFAULT_INLINE, DEFAULT_PARAGRAPH, isVisualBox, countElements, sameInline, PAGE_MIN, PAGE_MAX, PAGE_MAX_AREA } from "./validate.ts";
+export { parsePage, DEFAULT_INLINE, DEFAULT_PARAGRAPH, isVisualBox, countElements, sameInline, PAGE_MIN, PAGE_MAX, PAGE_MAX_AREA } from "./parse/mod.ts";
 export { serialisePage, serialiseNode, fontFamilyCss } from "./serialise.ts";
 export { checkAgainstBase, flattenIds, type FlatNode } from "./base.ts";
-export { checkSrc, fmt, type Problem } from "./css.ts";
+export { checkSrc, fmt, type Problem } from "./css/mod.ts";
 export { tokenisePath, toAbsoluteCubic, MAX_PATHS, MAX_PATH_BYTES, MAX_FILL_COLORS, type PathSegment } from "./path.ts";
