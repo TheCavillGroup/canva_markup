@@ -6,7 +6,7 @@ import type { FontWeight } from "./types.ts";
 export interface BrandFont {
     /** Canva fontRef the alias applies, e.g. "YADK4LSvvyE:0" */
     ref : string;
-    /** Real family name, used to measure text (textmetrics, or a webfont in the hidden DOM) */
+    /** Real family name, used to measure text the browser has to lay out (fonts textmetrics doesn't know) */
     family : string;
     /** Weights the font has its own face for; documentation only (Canva shows the nearest it has) */
     weights? : ReadonlyArray<FontWeight>;
@@ -25,8 +25,6 @@ export interface Brand {
     defaultFont : string;
     /** Font `<h1>`–`<h6>` default to: an alias or a Canva library font name */
     headingFont : string;
-    /** Base URL serving `<family>.woff2`, used to measure brand fonts the browser doesn't have */
-    fontUrl? : string;
 }
 
 /** The Cavill Group: the default brand everywhere a brand is optional */

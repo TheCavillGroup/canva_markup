@@ -12,7 +12,7 @@
  * import { CAVILL, serialisePage } from "@thecavillgroup/canva-markup";
  * import { createReconciler } from "@thecavillgroup/canva-markup/canva";
  *
- * const canva = createReconciler({ ...CAVILL, fontUrl: "https://example.com/fonts" });
+ * const canva = createReconciler(CAVILL);
  * const { doc, pageIndex } = await canva.readPage();
  * const markup = serialisePage(doc).replace("Open Saturday", "Open Sunday");
  * const res = await canva.applyPage(markup, { pageIndex, pageId: doc.pageId, baseRevision: doc.revision!, resolveImage: src => ({ url: src, mimeType: "image/jpeg" }) });
@@ -26,7 +26,7 @@ export { ReconcileError, isReconcileError, type ReconcileErrorCode } from "./err
 export { executeApply, conflictsWithLive, differences, roundedPath, collectSources, type ApplyDeps, type ExecuteContext, type Settled } from "./apply.ts";
 export { readLivePage, snapshotNode, plannedText, type LiveRead, type LiveEntry } from "./read.ts";
 export { layout, predictable, type PlanItem } from "./layout.ts";
-export { createFontRegistry, ensureMeasureFont, type FontRegistry } from "./fonts.ts";
+export { createFontRegistry, type FontRegistry } from "./fonts.ts";
 export { createIdRegistry, fingerprint, revisionOf, walk, type IdRegistry } from "./ids.ts";
 export { limited } from "./limit.ts";
 export type { Trace } from "./trace.ts";

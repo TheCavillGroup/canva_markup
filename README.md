@@ -53,8 +53,7 @@ const m = createMarkup({
     fonts: { "brand-title": { ref: "YAF209YF8M8:0", family: "Safira March" } },
     colors: { "brand-sand": "#e8dcc8" },
     defaultFont: "Lato",
-    headingFont: "brand-title",
-    fontUrl: "https://example.com/fonts"
+    headingFont: "brand-title"
 });
 m.parsePage(`<page width="800" height="600" style="background-color:brand-sand"><h1>Hi</h1></page>`);
 ```
@@ -67,7 +66,7 @@ Aliases and colour names must look like `brand-<name>`. The spec in [docs/MARKUP
 import { CAVILL, serialisePage } from "@thecavillgroup/canva-markup";
 import { createReconciler } from "@thecavillgroup/canva-markup/canva";
 
-const canva = createReconciler({ ...CAVILL, fontUrl: `${BACKEND_HOST}/fonts` });
+const canva = createReconciler(CAVILL);
 
 const { doc, pageIndex } = await canva.readPage();           // the page the user is on
 const edited = serialisePage(doc).replace("Open Saturday", "Open Sunday");

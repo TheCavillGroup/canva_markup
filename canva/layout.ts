@@ -3,7 +3,7 @@ import { fmt } from "../css/mod.ts";
 import { isVisualBox } from "../parse/mod.ts";
 import { CAVILL, type Brand } from "../brand.ts";
 import type { ApplyWarning, Node, PageDoc, Paragraph, StyleMap, TextNode } from "../types.ts";
-import { ensureMeasureFont, type FontRegistry } from "./fonts.ts";
+import type { FontRegistry } from "./fonts.ts";
 
 // Lays the markup out in a hidden DOM inside the app iframe and measures every element.
 // All of this happens before openDesign, so the 1-minute session is only spent on edits.
@@ -130,7 +130,7 @@ function findPredictable(nodes : Array<Node>, brand : Brand, out = new Map<Node,
 
 /**
  * Lays the page out in a hidden DOM and returns every element's box (and warnings). Needs a browser
- * document; brand fonts the browser lacks are fetched from `brand.fontUrl` first.
+ * document; text in fonts textmetrics doesn't know is measured with whatever the browser falls back to.
  */
 export async function layout(doc : PageDoc, fonts : FontRegistry) : Promise<{ items : Array<PlanItem>, warnings : Array<ApplyWarning> }> {
     const warnings : Array<ApplyWarning> = [];
@@ -153,12 +153,9 @@ export async function layout(doc : PageDoc, fonts : FontRegistry) : Promise<{ it
         });
     }
 
-    const fams = [...families(doc.children, predicted)];
-    const results = await Promise.all(fams.map(f => ensureMeasureFont(fonts.measureFamily(f), brand.fontUrl)));
-    fams.forEach((f, i) => {
-        if(!results[i]) warnings.push({ code: "measure_font", message: `Layout for "${f}" was measured with a fallback font, so line breaks may differ slightly from Canva.` });
-    });
-    await document.fonts.ready;
+    for(const f of families(doc.children, predicted)) {
+        warnings.push({ code: "measure_font", message: `Layout for "${f}" was measured with a fallback font (textmetrics doesn't know it), so line breaks may differ slightly from Canva.` });
+    }
 
     const host = document.createElement("div");
     host.setAttribute("aria-hidden", "true");
