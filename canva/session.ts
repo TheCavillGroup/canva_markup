@@ -53,6 +53,7 @@ export interface Reconciler {
     readonly ids : IdRegistry;
     /** Reads a page (default: the one the user is on) as a canonical doc with data-ids and a revision */
     readPage(pageIndex? : number) : Promise<{ doc : PageDoc, pages : Array<PageSummary>, pageIndex : number }>;
+    readAllPages(): Promise<{ docs : Array<PageDoc>, pages : Array<PageSummary> }>;
     /**
      * Applies a whole page of markup (or a parsed doc) as one undo step. The markup is validated, and checked
      * against the live page inside the session, so nothing is applied unless all of it can be.
@@ -61,6 +62,7 @@ export interface Reconciler {
     /** Adds a page (optionally sized, titled, and placed after page `after`; -1 = first) */
     addPage(opts? : { width? : number, height? : number, title? : string, after? : number }) : Promise<{ pageId? : string, pageIndex : number, width : number, height : number }>;
     pageSummaries() : Promise<{ pages : Array<PageSummary>, current : number }>;
+
 }
 
 /** Pages of the open design, and which one the user is on */
@@ -115,6 +117,24 @@ export function createReconciler(brand : Brand = CAVILL, opts : ReconcilerOption
         }));
         if(!read) throw reconcileError("canva_error", "The page couldn't be read.");
         return { doc: read.doc, pages, pageIndex: index };
+    }
+
+    async function readAllPages() : Promise<{ docs : Array<PageDoc>, pages : Array<PageSummary> }>  {
+        const { pages, current } = await pageSummaries();
+        const reads : LiveRead[] = [];
+        await limited(() => openDesign({ type: "all_pages" }, async session => {
+            for(const ref of session.pageRefs.toArray()) {
+                if(!ref || ref.type !== "absolute") throw reconcileError("unsupported_page", "That page can't be read by apps (for example a Canva Docs page).");
+                await session.helpers.openPage(ref, async ({ page }) => {
+                    if(page.type !== "absolute") throw reconcileError("unsupported_page", "Unsupported page type.");
+                    if(!page.dimensions) throw reconcileError("unsupported_page", "Whiteboard (unbounded) pages aren't supported.");
+                    reads.push(await readLivePage(page, fonts, ids));
+                });
+            }
+        }));
+        if(!reads) throw reconcileError("canva_error", "The page couldn't be read.");
+
+        return { docs: reads.map(x => x.doc), pages }
     }
 
     /**
@@ -273,6 +293,6 @@ export function createReconciler(brand : Brand = CAVILL, opts : ReconcilerOption
         return { pageId: meta.id, pageIndex: pages.findIndex(p => p.id === meta.id), width: meta.dimensions?.width ?? width ?? 0, height: meta.dimensions?.height ?? height ?? 0 };
     }
 
-    return { brand, fonts, ids, readPage, applyPage, addPage, pageSummaries };
+    return { brand, fonts, ids, readPage, readAllPages, applyPage, addPage, pageSummaries };
 }
 
