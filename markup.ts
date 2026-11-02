@@ -3,12 +3,13 @@ import { parsePage } from "./parse/mod.ts";
 import { paragraphDefaults } from "./parse/format.ts";
 import { fontFamilyCss, serialiseNode, serialisePage } from "./serialise.ts";
 import { checkAgainstBase } from "./base.ts";
+import { createHtml, type HtmlTag, type TemplateResult } from "./template.ts";
 import type { Issue, Node, PageDoc, ParagraphFormat, ParseResult } from "./types.ts";
 
 /** The markup functions bound to one brand */
 export interface Markup {
     readonly brand : Brand;
-    parsePage(src : string) : ParseResult;
+    parsePage(src : string | TemplateResult) : ParseResult;
     serialisePage(doc : PageDoc) : string;
     serialiseNode(n : Node) : string;
     checkAgainstBase(base : PageDoc, next : PageDoc) : Array<Issue>;
@@ -18,6 +19,8 @@ export interface Markup {
     /** docs/MARKUP.md with this brand's fonts and colours filled in */
     renderSpec(spec : string) : string;
     brandSpec() : ReturnType<typeof brandSpec>;
+    /** html`` that serialises nodes with this brand */
+    readonly html : HtmlTag;
 }
 
 /**
@@ -40,6 +43,7 @@ export function createMarkup(brand : Brand) : Markup {
         fontFamilyCss: f => fontFamilyCss(f, brand),
         defaultParagraph: paragraphDefaults(brand),
         renderSpec: spec => renderSpec(spec, brand),
-        brandSpec: () => brandSpec(brand)
+        brandSpec: () => brandSpec(brand),
+        html: createHtml(brand)
     };
 }

@@ -10,7 +10,7 @@ import type { InlineFormat, Node, PageDoc, Paragraph, Run, StyleMap } from "./ty
 const INDENT = "  ";
 const OL_MARKERS = new Set(["decimal", "lower-alpha", "lower-roman"]);
 
-const escapeAttr = (s : string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+export const escapeAttr = (s : string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 const escapeText = (s : string) => s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

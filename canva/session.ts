@@ -2,6 +2,7 @@ import { findFonts, upload, type FontRef, type ImageRef } from "@canva/asset";
 import { addPage as canvaAddPage, getCurrentPageMetadata, getDesignMetadata, openDesign, type DesignEditing, type PageId } from "@canva/design";
 import { CAVILL, assertBrand, type Brand } from "../brand.ts";
 import { parsePage } from "../parse/mod.ts";
+import { isTemplate, type TemplateResult } from "../template.ts";
 import type { ApplyWarning, ElementResult, PageDoc, PageSummary } from "../types.ts";
 import { collectSources, conflictsWithLive, differences, executeApply, type Settled } from "./apply.ts";
 import { reconcileError } from "./errors.ts";
@@ -53,7 +54,7 @@ export interface Reconciler {
      * Applies a whole page of markup (or a parsed doc) as one undo step. The markup is validated, and checked
      * against the live page inside the session, so nothing is applied unless all of it can be.
      */
-    applyPage(input : string | PageDoc, opt : ApplyOptions) : Promise<ApplyResult>;
+    applyPage(input : string | TemplateResult | PageDoc, opt : ApplyOptions) : Promise<ApplyResult>;
     /** Adds a page (optionally sized, titled, and placed after page `after`; -1 = first) */
     addPage(opts? : { width? : number, height? : number, title? : string, after? : number }) : Promise<{ pageId? : string, pageIndex : number, width : number, height : number }>;
     pageSummaries() : Promise<{ pages : Array<PageSummary>, current : number }>;
@@ -117,13 +118,13 @@ export function createReconciler(brand : Brand = CAVILL, opts : ReconcilerOption
      * Applies a whole page of markup (or a parsed doc) as one undo step. The markup is validated, and checked
      * against the live page inside the session, so nothing is applied unless all of it can be.
      */
-    async function applyPage(input : string | PageDoc, opt : ApplyOptions) : Promise<ApplyResult> {
+    async function applyPage(input : string | TemplateResult | PageDoc, opt : ApplyOptions) : Promise<ApplyResult> {
         const warnings : Array<ApplyWarning> = [];
         const results : Array<ElementResult> = [];
         const uploaded : Record<string, string> = {};
 
         let doc : PageDoc;
-        if(typeof input === "string") {
+        if(typeof input === "string" || isTemplate(input)) {
             const parsed = parsePage(input, brand);
             if(!parsed.doc) throw reconcileError("validation_failed", "The markup was rejected; nothing was changed.", { issues: parsed.issues });
             doc = parsed.doc;

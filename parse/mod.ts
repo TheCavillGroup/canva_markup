@@ -5,6 +5,7 @@ import { createNodeReader } from "./nodes.ts";
 import { PAGE_STYLE } from "./tags.ts";
 import type { PageDoc, ParseResult } from "../types.ts";
 import { CAVILL, type Brand } from "../brand.ts";
+import type { TemplateResult } from "../template.ts";
 
 /**
  * Parses and validates a page against a brand (default {@link CAVILL}). `doc` is only set when there are no errors; warnings can come either way.
@@ -14,7 +15,8 @@ import { CAVILL, type Brand } from "../brand.ts";
  * const { doc, issues } = parsePage(`<page width="800" height="600"><p>Hello</p></page>`);
  * ```
  */
-export function parsePage(src : string, brand : Brand = CAVILL) : ParseResult {
+export function parsePage(_src : string | TemplateResult, brand : Brand = CAVILL) : ParseResult {
+    const src = String(_src);
     const cx = createReader(brand);
     const { issues, add, checkAttrs, readLocked, readStyle } = cx;
     const { readChildren } = createNodeReader(cx);

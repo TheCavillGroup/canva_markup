@@ -23,6 +23,24 @@ console.log(next.issues, checkAgainstBase(base.doc, next.doc!));
 
 The root export has no Deno, DOM or Canva dependencies, so it runs on a server and in a browser.
 
+## Templates
+
+`html` builds markup from data. Values are escaped, objects become styles (numbers in px), arrays are joined, and `false`/`null` render nothing. Nodes from `parsePage` or `readPage` render back with their `data-id`s.
+
+```ts
+import { html, parsePage } from "@thecavillgroup/canva-markup";
+
+const stat = (n : number, label : string) => html`<p style=${{ fontSize: 28, textAlign: "center" }}>${n} ${label}</p>`;
+const page = html`<page width="1080" height="1350" style=${{ display: "flex", flexDirection: "column", padding: 64, gap: 32 }}>
+  <h1>${sold ? "Sold" : "Just Listed"}</h1>
+  <p>${address}, <b>${suburb}</b></p>
+  ${stats.map(x => stat(x.n, x.label))}
+</page>`;
+parsePage(page);    // canva.applyPage(page, …) takes it too
+```
+
+Full read → build → apply walkthroughs are in [docs/EXAMPLES.md](docs/EXAMPLES.md).
+
 ## Brands
 
 Font aliases (`brand-headline`) and colour names (`brand-text-blue`) come from a `Brand`. The plain exports use `CAVILL`. For another brand, use `createMarkup`:
