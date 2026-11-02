@@ -2,6 +2,7 @@ import type { RawElement, RawNode } from "./html.ts";
 import { isProblem, KNOWN_PROPS, mergeBorder, normalise, parseStyle, REJECTED_PROPS, TEXT_PROPS, type Problem } from "../css/mod.ts";
 import { allowedHint, BLOCK_TAGS, KNOWN_TAGS, TAG_ATTRS, UNSUPPORTED_TAGS } from "./tags.ts";
 import type { Issue, IssueCode, StyleMap } from "../types.ts";
+import type { Brand } from "../brand.ts";
 
 export const MAX_ERRORS = 50;
 
@@ -12,7 +13,7 @@ export interface Ctx {
 }
 
 /** Issue collection and the checks every element reader shares. One per parsePage call. */
-export function createReader() {
+export function createReader(brand : Brand) {
     const issues : Array<Issue> = [];
     let errors = 0;
     const ids = new Set<string>();
@@ -104,7 +105,7 @@ export function createReader() {
                 add("unsupported_css", path, "Text boxes can't have a height: Canva sizes text to its content.", { dataId, property: prop, fix: "Remove height. Set width, then font-size/line-height to control the size." });
                 continue;
             }
-            const v = normalise(prop, value);
+            const v = normalise(prop, value, brand);
             if(isProblem(v)) {
                 problem(v, path, { dataId, property: prop });
                 continue;
@@ -136,7 +137,7 @@ export function createReader() {
         errors += found.length;
     };
 
-    return { issues, add, problem, childPaths, checkAttrs, readId, readLocked, readStyle, textOutside, badTag, adopt };
+    return { brand, issues, add, problem, childPaths, checkAttrs, readId, readLocked, readStyle, textOutside, badTag, adopt };
 }
 
 export type Reader = ReturnType<typeof createReader>;

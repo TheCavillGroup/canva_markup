@@ -1,7 +1,7 @@
 import { decodeEntities, type RawElement, type RawNode } from "./html.ts";
 import { fmt, INLINE_PROPS, TEXT_PROPS } from "../css/mod.ts";
 import { BLOCK_TAGS, HEADING_SIZES, INLINE_TAGS, TEXT_BOX_STYLE } from "./tags.ts";
-import { DEFAULT_INLINE, DEFAULT_PARAGRAPH, sameInline } from "./format.ts";
+import { DEFAULT_INLINE, paragraphDefaults, sameInline } from "./format.ts";
 import type { Reader } from "./reader.ts";
 import type { FontWeight, InlineFormat, ListMarker, Paragraph, ParagraphFormat, Run, StyleMap, TextAlign } from "../types.ts";
 
@@ -9,6 +9,8 @@ type RawRun = { raw : string, format : InlineFormat };
 
 export function createTextReader(cx : Reader) {
     const { add, childPaths, checkAttrs, readStyle, textOutside, badTag } = cx;
+    const DEFAULT_PARAGRAPH = paragraphDefaults(cx.brand);
+    const headingFont = cx.brand.fonts[cx.brand.headingFont] ? cx.brand.headingFont : `"${cx.brand.headingFont}"`;
 
     // --- text ---
 
@@ -119,7 +121,7 @@ export function createTextReader(cx : Reader) {
     const readParagraph = (el : RawElement, ctx : StyleMap, path : string, standalone : boolean) : { para : Paragraph, item : StyleMap } => {
         const { style, text } = readStyle(el, path, standalone ? TEXT_BOX_STYLE : TEXT_PROPS);
         const heading = HEADING_SIZES[el.tag];
-        const merged = { ...ctx, ...(heading ? { "font-family": "brand-headline", "font-size": `${heading}px` } : {}), ...text };
+        const merged = { ...ctx, ...(heading ? { "font-family": headingFont, "font-size": `${heading}px` } : {}), ...text };
         const format = resolveParagraph(merged, path, el.attrs["data-id"]);
         const raw : Array<RawRun> = [];
         walkInline(el.children, applyInline(DEFAULT_INLINE, merged), path, raw, false);

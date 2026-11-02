@@ -1,4 +1,5 @@
 import type { BoxNode, InlineFormat, Node, ParagraphFormat } from "../types.ts";
+import { CAVILL, type Brand } from "../brand.ts";
 
 /** Smallest page width/height, px */
 export const PAGE_MIN = 40;
@@ -7,16 +8,21 @@ export const PAGE_MAX = 8000;
 /** Largest page area, px² */
 export const PAGE_MAX_AREA = 25_000_000;
 
-/** Paragraph format a <p> gets when the markup doesn't set it */
-export const DEFAULT_PARAGRAPH : ParagraphFormat = {
-    fontFamily: "brand-body",
-    fontSize: 16,
-    textAlign: "start",
-    lineHeight: 1.4,
-    letterSpacing: 0,
-    listLevel: 0,
-    listMarker: "none"
-};
+/** Paragraph format a <p> gets when the markup doesn't set it, for a brand */
+export function paragraphDefaults(brand : Brand) : ParagraphFormat {
+    return {
+        fontFamily: brand.defaultFont,
+        fontSize: 16,
+        textAlign: "start",
+        lineHeight: 1.4,
+        letterSpacing: 0,
+        listLevel: 0,
+        listMarker: "none"
+    };
+}
+
+/** {@link paragraphDefaults} for the default brand ({@link CAVILL}) */
+export const DEFAULT_PARAGRAPH : ParagraphFormat = paragraphDefaults(CAVILL);
 
 /** Inline format a run gets when the markup doesn't set it */
 export const DEFAULT_INLINE : InlineFormat = {

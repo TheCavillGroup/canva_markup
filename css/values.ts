@@ -1,4 +1,4 @@
-import { BRAND_COLORS, FONT_ALIASES } from "../types.ts";
+import { CAVILL, type Brand } from "../brand.ts";
 import type { Problem } from "./types.ts";
 
 export const isProblem = (x : unknown) : x is Problem => typeof x === "object" && x != null && "problem" in x;
@@ -42,14 +42,14 @@ function normLengthList(v : string, min : number, max : number, opts : LengthOpt
     return out.join(" ");
 }
 
-export function normColor(v : string) : string | Problem {
+export function normColor(v : string, brand : Brand = CAVILL) : string | Problem {
     const s = v.trim().toLowerCase();
-    if(BRAND_COLORS[s]) return BRAND_COLORS[s];
+    if(Object.hasOwn(brand.colors, s)) return brand.colors[s]!;
     if(/^#[0-9a-f]{6}$/.test(s)) return s;
     if(/^#[0-9a-f]{3}$/.test(s)) return "#" + [...s.slice(1)].map(c => c + c).join("");
     if(/^#[0-9a-f]{8}$/.test(s) || /^#[0-9a-f]{4}$/.test(s)) return { problem: `"${v}" has an alpha channel.`, fix: "Use #rrggbb and set opacity on the element." };
     if(/^(rgba?|hsla?)\(/.test(s)) return { problem: `"${v}" isn't supported.`, fix: "Use a hex colour like #1d1d1b (put any alpha in opacity)." };
-    return { problem: `"${v}" isn't a hex colour.`, fix: `Use a hex colour like #1d1d1b, or a brand colour: ${Object.keys(BRAND_COLORS).join(", ")}.` };
+    return { problem: `"${v}" isn't a hex colour.`, fix: `Use a hex colour like #1d1d1b${Object.keys(brand.colors).length ? `, or a brand colour: ${Object.keys(brand.colors).join(", ")}` : ""}.` };
 }
 
 function oneOf(v : string, allowed : ReadonlyArray<string>, fix? : string) : string | Problem {
@@ -80,14 +80,15 @@ export function normRotation(v : string) : string | Problem {
     return `rotate(${fmt(deg)}deg)`;
 }
 
-export function normFontFamily(v : string) : string | Problem {
+export function normFontFamily(v : string, brand : Brand = CAVILL) : string | Problem {
     const s = v.trim();
     if(/,/.test(s.replace(/"[^"]*"|'[^']*'/g, ""))) return { problem: "Font fallbacks aren't used.", fix: "Give exactly one font-family." };
     const unq = s.replace(/^["']|["']$/g, "").trim();
-    if((FONT_ALIASES as ReadonlyArray<string>).includes(unq.toLowerCase())) return unq.toLowerCase();
+    if(Object.hasOwn(brand.fonts, unq.toLowerCase())) return unq.toLowerCase();
+    if(/^brand-/i.test(unq)) return { problem: `"${unq}" isn't one of this brand's fonts.`, fix: `Use ${[...Object.keys(brand.fonts), "a Canva library font name"].join(", ")}, or "ref:<fontRef>".` };
     if(/^ref:[A-Za-z0-9_\-]+:\d+$/.test(unq)) return `"${unq}"`;
     if(/^[A-Za-z0-9][A-Za-z0-9 \-'&.]*$/.test(unq)) return `"${unq}"`;
-    return { problem: `"${v}" isn't a valid font family.`, fix: `Use ${FONT_ALIASES.join(", ")}, a Canva library font name, or "ref:<fontRef>".` };
+    return { problem: `"${v}" isn't a valid font family.`, fix: `Use ${[...Object.keys(brand.fonts), "a Canva library font name"].join(", ")}, or "ref:<fontRef>".` };
 }
 
 const WEIGHT_NUM : Record<string, string> = { "100": "thin", "200": "extralight", "300": "light", "400": "normal", "500": "medium", "600": "semibold", "700": "bold", "800": "ultrabold", "900": "heavy" };
@@ -115,7 +116,7 @@ function normEmish(v : string, allowNormal : boolean, allowUnitless : boolean) :
     return `${fmt(Number(m[1]), 4)}${m[2] ?? ""}`;
 }
 
-export function normalise(prop : string, value : string) : string | Problem {
+export function normalise(prop : string, value : string, brand : Brand = CAVILL) : string | Problem {
     if(/!important/i.test(value)) return { problem: "!important isn't used.", fix: "Remove !important." };
     if(/\bvar\(|\bcalc\(|\benv\(/i.test(value)) return { problem: `"${value}": var()/calc() aren't supported.`, fix: "Write the computed value." };
 
@@ -182,7 +183,7 @@ export function normalise(prop : string, value : string) : string | Problem {
         }
         case "grid-auto-flow": return oneOf(value.trim().replace(/\s+/g, " "), ["row", "column", "dense", "row dense", "column dense"]);
 
-        case "background-color": return normColor(value);
+        case "background-color": return normColor(value, brand);
         case "background-image": {
             const s = value.trim();
             if(/gradient\(/i.test(s)) return { problem: "Gradients aren't supported by the Canva API.", fix: "Use a solid background-color, or an image with the gradient baked in." };
@@ -200,17 +201,17 @@ export function normalise(prop : string, value : string) : string | Problem {
             return { problem: `background-position "${value}" isn't supported.`, fix: "Images are always centred. Remove background-position." };
         }
         case "background-repeat": return oneOf(value, ["no-repeat"], "Images never tile. Remove background-repeat.");
-        case "border": return normBorder(value);
+        case "border": return normBorder(value, brand);
         case "border-width": return normLength(value);
         case "border-style": return oneOf(value, ["solid", "none"], "Only solid borders are supported.");
-        case "border-color": return normColor(value);
+        case "border-color": return normColor(value, brand);
         case "border-radius": {
             if(value.includes("/")) return { problem: "Elliptical radii aren't supported.", fix: "Use 1–4 px/% values." };
             return normLengthList(value, 1, 4, { percent: true });
         }
         case "object-fit": return oneOf(value, ["cover"], "Images always cover their box, centred. Crop the image beforehand, or size the box to the image's aspect ratio.");
 
-        case "font-family": return normFontFamily(value);
+        case "font-family": return normFontFamily(value, brand);
         case "font-size": {
             const s = value.trim().toLowerCase();
             const m = new RegExp(`^(${NUM})px$`).exec(s);
@@ -221,7 +222,7 @@ export function normalise(prop : string, value : string) : string | Problem {
         }
         case "font-weight": return normFontWeight(value);
         case "font-style": return oneOf(value, ["normal", "italic"]);
-        case "color": return normColor(value);
+        case "color": return normColor(value, brand);
         case "text-align": {
             const s = value.trim().toLowerCase();
             const map : Record<string, string> = { left: "start", start: "start", center: "center", right: "end", end: "end", justify: "justify" };
@@ -236,13 +237,13 @@ export function normalise(prop : string, value : string) : string | Problem {
     return { problem: `Unknown property ${prop}.` };
 }
 
-function normBorder(v : string) : string | Problem {
+function normBorder(v : string, brand : Brand) : string | Problem {
     const s = v.trim().toLowerCase();
     if(s === "none" || s === "0") return "none";
     let width : string | undefined, style : string | undefined, color : string | undefined;
     for(const part of s.split(/\s+/)) {
-        if(part.startsWith("#") || BRAND_COLORS[part]) {
-            const c = normColor(part);
+        if(part.startsWith("#") || Object.hasOwn(brand.colors, part)) {
+            const c = normColor(part, brand);
             if(isProblem(c)) return c;
             color = c;
         } else if(["solid", "none", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"].includes(part)) {

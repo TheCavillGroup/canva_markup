@@ -40,7 +40,7 @@ export function readSvg(cx : Reader, el : RawElement, ctx : Ctx) : ShapeNode | u
 
         const fill = c.attrs.fill;
         if(fill != null && fill.trim().toLowerCase() !== "none") {
-            const v = normColor(fill);
+            const v = normColor(fill, cx.brand);
             if(isProblem(v)) problem(v, p, { dataId: id, property: "fill" });
             else sp.fill = v;
         } else if(fill == null && c.attrs["fill-image"] == null) {
@@ -53,7 +53,7 @@ export function readSvg(cx : Reader, el : RawElement, ctx : Ctx) : ShapeNode | u
         }
         const stroke = c.attrs.stroke;
         if(stroke != null && stroke.trim().toLowerCase() !== "none") {
-            const v = normColor(stroke);
+            const v = normColor(stroke, cx.brand);
             if(isProblem(v)) problem(v, p, { dataId: id, property: "stroke" });
             else sp.stroke = v;
             const w = Number((c.attrs["stroke-width"] ?? "1").replace(/px$/, ""));

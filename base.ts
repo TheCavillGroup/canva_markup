@@ -1,5 +1,6 @@
 import { serialiseNode, serialisePage } from "./serialise.ts";
 import type { Issue, Node, PageDoc } from "./types.ts";
+import { CAVILL, type Brand } from "./brand.ts";
 
 export interface FlatNode {
     node : Node,
@@ -43,7 +44,7 @@ const KIND_NAMES : Record<Node["kind"], string> = { box: "<div>", text: "<text>"
  * Rules that need the page Claude read (the base): ids must come from it, and placeholders,
  * locked elements and embed sizes must survive untouched.
  */
-export function checkAgainstBase(base : PageDoc, next : PageDoc) : Array<Issue> {
+export function checkAgainstBase(base : PageDoc, next : PageDoc, brand : Brand = CAVILL) : Array<Issue> {
     const issues : Array<Issue> = [];
     const err = (code : Issue["code"], path : string, message : string, extra : Partial<Issue> = {}) => issues.push({ severity: "error", code, path, message, ...extra });
 
@@ -51,7 +52,7 @@ export function checkAgainstBase(base : PageDoc, next : PageDoc) : Array<Issue> 
         err("page_size_mismatch", "page", `Page is ${base.width}×${base.height} but the markup says ${next.width}×${next.height}.`, { fix: "Apps can't resize existing pages. Keep the width/height from get_page, or use add_page for a new size." });
     }
 
-    if(base.locked && serialisePage({ ...base, revision: undefined }) !== serialisePage({ ...next, revision: undefined })) {
+    if(base.locked && serialisePage({ ...base, revision: undefined }, brand) !== serialisePage({ ...next, revision: undefined }, brand)) {
         err("page_locked", "page", "This page is locked in Canva.", { fix: "Ask the user to unlock the page, then re-read it." });
     }
 
@@ -77,7 +78,7 @@ export function checkAgainstBase(base : PageDoc, next : PageDoc) : Array<Issue> 
                 err(k === "unsupported" ? "deleted_placeholder" : "deleted_locked", "page", `${k === "unsupported" ? "Unsupported element" : "Locked element"} "${id}" was removed.`, { dataId: id, fix: `Put the <${k === "unsupported" ? "canva-unsupported" : KIND_NAMES[k].slice(1, -1)} data-id="${id}" …> line back exactly as get_page returned it.` });
                 continue;
             }
-            if(serialiseNode(was.node) !== serialiseNode(now.node) || was.group !== now.group) {
+            if(serialiseNode(was.node, brand) !== serialiseNode(now.node, brand) || was.group !== now.group) {
                 err(k === "unsupported" ? "modified_placeholder" : "modified_locked", now.node.path, `${what === "placeholder" ? "Unsupported element" : "Locked element"} "${id}" was changed.`, { dataId: id, fix: "Restore it exactly as get_page returned it (same attributes, same position, same group)." });
             }
         } else if(k === "embed" && now && now.node.kind === "embed") {

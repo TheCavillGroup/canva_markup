@@ -1,6 +1,7 @@
 import { fmt, serialiseStyle } from "./css/mod.ts";
-import { DEFAULT_INLINE, DEFAULT_PARAGRAPH } from "./parse/mod.ts";
-import { FONT_ALIASES, type InlineFormat, type Node, type PageDoc, type Paragraph, type Run, type StyleMap } from "./types.ts";
+import { DEFAULT_INLINE, paragraphDefaults } from "./parse/mod.ts";
+import { CAVILL, type Brand } from "./brand.ts";
+import type { InlineFormat, Node, PageDoc, Paragraph, Run, StyleMap } from "./types.ts";
 
 // Canonical markup: fixed attribute and style order, explicit paragraph styles, 2-space indent.
 // serialisePage(parsePage(x).doc) is a fixed point, which is what makes untouched elements
@@ -24,8 +25,8 @@ function attrs(list : Array<[string, string | number | boolean | undefined]>) : 
 }
 
 /** font-family value for a ParagraphFormat.fontFamily: aliases bare, everything else quoted */
-export function fontFamilyCss(f : string) : string {
-    return (FONT_ALIASES as ReadonlyArray<string>).includes(f) ? f : `"${f}"`;
+export function fontFamilyCss(f : string, brand : Brand = CAVILL) : string {
+    return Object.hasOwn(brand.fonts, f) ? f : `"${f}"`;
 }
 
 function decorationCss(f : InlineFormat) : string {
@@ -43,10 +44,11 @@ function inlineDiff(f : InlineFormat, base : InlineFormat) : StyleMap {
 }
 
 /** Paragraph-level style plus the inline base it implies for its runs. */
-function paragraphStyle(p : Paragraph) : { style : StyleMap, base : InlineFormat } {
+function paragraphStyle(p : Paragraph, brand : Brand) : { style : StyleMap, base : InlineFormat } {
     const f = p.format;
+    const DEFAULT_PARAGRAPH = paragraphDefaults(brand);
     const style : StyleMap = {};
-    if(f.fontFamily !== DEFAULT_PARAGRAPH.fontFamily) style["font-family"] = fontFamilyCss(f.fontFamily);
+    if(f.fontFamily !== DEFAULT_PARAGRAPH.fontFamily) style["font-family"] = fontFamilyCss(f.fontFamily, brand);
     if(f.fontSize !== DEFAULT_PARAGRAPH.fontSize) style["font-size"] = `${fmt(f.fontSize)}px`;
     if(f.textAlign !== DEFAULT_PARAGRAPH.textAlign) style["text-align"] = f.textAlign === "start" ? "left" : f.textAlign === "end" ? "right" : f.textAlign;
     if(f.lineHeight !== DEFAULT_PARAGRAPH.lineHeight) style["line-height"] = fmt(f.lineHeight, 4);
@@ -84,13 +86,13 @@ function serialiseInline(s : StyleMap) : string {
     return INLINE_ORDER.filter(k => s[k] != null).map(k => `${k}:${s[k]}`).join("; ");
 }
 
-function renderParagraph(tag : "p" | "li", p : Paragraph, close = true) : string {
-    const { style, base } = paragraphStyle(p);
+function renderParagraph(tag : "p" | "li", p : Paragraph, brand : Brand, close = true) : string {
+    const { style, base } = paragraphStyle(p, brand);
     const st = Object.keys(style).length ? ` style="${escapeAttr(serialiseInline(style))}"` : "";
     return `<${tag}${st}>${renderRuns(p.runs, base)}${close ? `</${tag}>` : ""}`;
 }
 
-function renderList(items : Array<Paragraph>, level : number, indent : string, out : Array<string>) {
+function renderList(items : Array<Paragraph>, level : number, indent : string, out : Array<string>, brand : Brand) {
     let i = 0;
     while(i < items.length) {
         const marker = items[i].format.listLevel === level ? items[i].format.listMarker : "disc";
@@ -107,10 +109,10 @@ function renderList(items : Array<Paragraph>, level : number, indent : string, o
             while(j < items.length && items[j].format.listLevel > level) j++;
             const children = items.slice(it.format.listLevel === level ? i + 1 : i, j);
 
-            const head = it.format.listLevel === level ? renderParagraph("li", it, false) : "<li>";
+            const head = it.format.listLevel === level ? renderParagraph("li", it, brand, false) : "<li>";
             if(children.length) {
                 out.push(`${indent}${INDENT}${head}`);
-                renderList(children, level + 1, indent + INDENT + INDENT, out);
+                renderList(children, level + 1, indent + INDENT + INDENT, out, brand);
                 out.push(`${indent}${INDENT}</li>`);
             } else {
                 out.push(`${indent}${INDENT}${head}</li>`);
@@ -122,17 +124,17 @@ function renderList(items : Array<Paragraph>, level : number, indent : string, o
     }
 }
 
-function renderParagraphs(paras : Array<Paragraph>, indent : string, out : Array<string>) {
+function renderParagraphs(paras : Array<Paragraph>, indent : string, out : Array<string>, brand : Brand) {
     let i = 0;
     while(i < paras.length) {
         if(paras[i].format.listLevel === 0) {
-            out.push(indent + renderParagraph("p", paras[i]));
+            out.push(indent + renderParagraph("p", paras[i], brand));
             i++;
             continue;
         }
         let j = i;
         while(j < paras.length && paras[j].format.listLevel > 0) j++;
-        renderList(paras.slice(i, j), 1, indent, out);
+        renderList(paras.slice(i, j), 1, indent, out, brand);
         i = j;
     }
 }
@@ -142,7 +144,7 @@ function styleAttr(style : StyleMap) : string | undefined {
     return s || undefined;
 }
 
-function renderNode(n : Node, indent : string, out : Array<string>) {
+function renderNode(n : Node, indent : string, out : Array<string>, brand : Brand) {
     if(n.kind === "box" || n.kind === "group") {
         const tag = n.kind === "box" ? "div" : "group";
         const open = `${indent}<${tag}${attrs([["data-id", n.id], ["style", styleAttr(n.style)], ["data-locked", n.locked]])}>`;
@@ -151,14 +153,14 @@ function renderNode(n : Node, indent : string, out : Array<string>) {
             return;
         }
         out.push(open);
-        for(const c of n.children) renderNode(c, indent + INDENT, out);
+        for(const c of n.children) renderNode(c, indent + INDENT, out, brand);
         out.push(`${indent}</${tag}>`);
         return;
     }
 
     if(n.kind === "text") {
         out.push(`${indent}<text${attrs([["data-id", n.id], ["style", styleAttr(n.style)], ["data-locked", n.locked], ["data-measured-height", n.measuredHeight != null ? fmt(n.measuredHeight) : undefined]])}>`);
-        renderParagraphs(n.paragraphs, indent + INDENT, out);
+        renderParagraphs(n.paragraphs, indent + INDENT, out, brand);
         out.push(`${indent}</text>`);
         return;
     }
@@ -186,17 +188,17 @@ function renderNode(n : Node, indent : string, out : Array<string>) {
 }
 
 /** Canonical markup for a page. parsePage(serialisePage(doc)) gives back the same doc. */
-export function serialisePage(doc : PageDoc) : string {
+export function serialisePage(doc : PageDoc, brand : Brand = CAVILL) : string {
     const out : Array<string> = [];
     out.push(`<page${attrs([["width", doc.width], ["height", doc.height], ["data-page-id", doc.pageId], ["data-revision", doc.revision], ["data-locked", doc.locked], ["style", styleAttr(doc.style)]])}>`);
-    for(const n of doc.children) renderNode(n, INDENT, out);
+    for(const n of doc.children) renderNode(n, INDENT, out, brand);
     out.push("</page>");
     return out.join("\n");
 }
 
 /** Canonical markup of a single node, for equality checks (e.g. placeholders against base). */
-export function serialiseNode(n : Node) : string {
+export function serialiseNode(n : Node, brand : Brand = CAVILL) : string {
     const out : Array<string> = [];
-    renderNode(n, "", out);
+    renderNode(n, "", out, brand);
     return out.join("\n");
 }

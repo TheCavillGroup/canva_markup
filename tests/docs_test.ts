@@ -1,9 +1,10 @@
 import { assert, assertEquals } from "@std/assert";
-import { ISSUE_CODES, parsePage } from "../mod.ts";
+import { CAVILL, createMarkup, ISSUE_CODES, parsePage, renderSpec } from "../mod.ts";
 
 // Every complete <page> example in docs/MARKUP.md must validate, so the spec can't drift from the code.
 // Line endings are normalised: checkouts with core.autocrlf get CRLF.
-const spec = (await Deno.readTextFile(new URL("../docs/MARKUP.md", import.meta.url))).replace(/\r\n/g, "\n");
+const raw = (await Deno.readTextFile(new URL("../docs/MARKUP.md", import.meta.url))).replace(/\r\n/g, "\n");
+const spec = renderSpec(raw, CAVILL);
 const examples = [...spec.matchAll(/```html\n([\s\S]*?)```/g)].map(m => m[1].trim()).filter(x => x.startsWith("<page") && x.endsWith("</page>"));
 
 Deno.test("MARKUP.md has page examples", () => {
@@ -27,4 +28,19 @@ Deno.test("MARKUP.md error example matches a real validator issue", () => {
 Deno.test("MARKUP.md documents every issue code", () => {
     const missing = ISSUE_CODES.filter(x => !spec.includes(`\`${x}\``));
     assertEquals(missing, []);
+});
+
+Deno.test("MARKUP.md placeholders are all filled", () => {
+    assertEquals(spec.match(/<!-- brand:[a-z-]+ -->/g), null);
+    assert(spec.includes("| `brand-headline` | Safira March (Cavill Group headings). Weights: thin, medium |"));
+    assert(spec.includes("| `brand-text-blue` | `#86d0cc` |"));
+    assert(spec.includes("`font-family: brand-body`"));
+});
+
+Deno.test("MARKUP.md renders for another brand", () => {
+    const m = createMarkup({ fonts: {}, colors: {}, defaultFont: "Lato", headingFont: "Montserrat" });
+    const out = m.renderSpec(raw);
+    assert(!out.includes("brand-headline` |"));
+    assert(out.includes("`font-family: Lato`"));
+    assert(out.includes("| (none) | |"));
 });

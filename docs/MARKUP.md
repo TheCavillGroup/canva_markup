@@ -6,9 +6,11 @@ Nothing is rasterised. Anything this spec doesn't allow is **rejected with an er
 node and suggests a fix**. It is never approximated.
 
 This is the spec for the `@thecavillgroup/canva-markup` parser. Everything below is checked by
-`parsePage` and `checkAgainstBase` unless it is marked **(host)**: those parts are applied by the
-Canva Bridge app and server (asset resolution, fonts, element results), which this package doesn't
-contain.
+`parsePage` and `checkAgainstBase` unless it is marked **(host)**: those parts are applied inside the
+Canva app by the package's `./canva` reconciler, or by the host around it (tools, asset resolution).
+
+Font aliases and colour names come from a brand. The `<!-- brand:… -->` placeholders are filled by
+`renderSpec(spec, brand)`; serve the rendered text, never this file as is.
 
 ## Workflow (host)
 
@@ -93,8 +95,8 @@ You can mix the two. Units are `px` and `%`; `0` needs no unit. Up to 2 decimals
 - **Inside a paragraph** only these can change: `<b>`/`<strong>`, `<i>`/`<em>`, `<u>`,
   `<s>`/`<del>`, `<a href>`, and `<span style>` with `color`, `font-weight`, `font-style`,
   `text-decoration`. To change font or size mid-paragraph, split it into separate paragraphs.
-- **Defaults:** `font-family: brand-body`, `16px`, `color:#000000`, `line-height:1.4`, left
-  aligned. `<h1>`–`<h6>` default to `brand-headline` at 64/48/36/28/22/18px. Headings are
+- **Defaults:** `font-family: <!-- brand:default-font -->`, `16px`, `color:#000000`, `line-height:1.4`, left
+  aligned. `<h1>`–`<h6>` default to `<!-- brand:heading-font -->` at 64/48/36/28/22/18px. Headings are
   otherwise plain paragraphs (`get_page` returns them as `<p>`).
 - **Lists:** `<ul>`/`<ol>` with `<li>`. Nest lists inside an `<li>` for deeper levels.
   `list-style-type`: disc, circle, square, decimal, lower-alpha, lower-roman, checked, unchecked,
@@ -116,10 +118,7 @@ Canva's **(host)**.
 
 | `font-family` | Font |
 |---|---|
-| `brand-headline` | Safira March (Cavill Group headings). Weights: thin, medium |
-| `brand-body` | Questrial (Cavill Group body). Normal only: bold looks the same |
-| `brand-body-alt` | Questrial (alternate cut). Weights: normal, bold |
-| `brand-script` | Mr Sheffield (script accent). Normal only |
+<!-- brand:fonts -->
 | `"Montserrat"` | a Canva library font, by name (an unknown name is an error) |
 | `"ref:YAF209YF8M8:0"` | an exact Canva font reference, as `get_page` returns it for fonts it can't name |
 
@@ -136,11 +135,7 @@ CSS colours and 8-digit hex are rejected.
 
 | Name | Hex |
 |---|---|
-| `brand-domino` | `#231f20` |
-| `brand-text-blue` | `#86d0cc` |
-| `brand-other-black` | `#090f10` |
-| `brand-black` | `#000000` |
-| `brand-lexicon` | `#eaeaea` |
+<!-- brand:colors -->
 
 ## Boxes
 
