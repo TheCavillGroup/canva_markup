@@ -1,6 +1,6 @@
 import type { DesignEditing, TextRegion } from "@canva/design";
 import { fmt } from "../css/mod.ts";
-import { DEFAULT_INLINE, paragraphDefaults, parsePage } from "../parse/mod.ts";
+import { DEFAULT_INLINE, PAGE_MAX, PAGE_MIN, paragraphDefaults, parsePage } from "../parse/mod.ts";
 import { serialiseNode } from "../serialise.ts";
 import { CAVILL, type Brand } from "../brand.ts";
 import type { InlineFormat, Node, PageDoc, Paragraph, ParagraphFormat, ShapePath, StyleMap, TextNode } from "../types.ts";
@@ -160,7 +160,7 @@ function canonicalise(n : Node, el : Live, width : number, height : number, bran
     const tagged = structuredClone(n);
     walk([tagged], x => { x.id = `tmp${k++}`; });
     // Page sizes can be fractional (559.37 x 793.7) but <page> only takes whole px
-    const parsed = parsePage(`<page width="${Math.max(40, Math.min(8000, Math.round(width)))}" height="${Math.max(40, Math.min(8000, Math.round(height)))}">${serialiseNode(tagged, brand)}</page>`, brand);
+    const parsed = parsePage(`<page width="${Math.max(PAGE_MIN, Math.min(PAGE_MAX, Math.round(width)))}" height="${Math.max(PAGE_MIN, Math.min(PAGE_MAX, Math.round(height)))}">${serialiseNode(tagged, brand)}</page>`, brand);
     const out = parsed.doc?.children[0];
     if(!out) return placeholder(el, "unreadable");
     walk([out], x => { delete x.id; });
@@ -177,9 +177,9 @@ export function plannedText(n : TextNode, el : Live, width : number, height : nu
     return canonicalise({ kind: "text", path: "", style: geometry(el, false), paragraphs: n.paragraphs, ...(el.locked ? { locked: true } : {}) }, el, width, height, brand);
 }
 
-function collectRefs(el : Live, out : Set<string>) {
+export function collectTextRefs(el : Live, out : Set<string>) {
     if(el.type === "text") for(const r of el.text.readTextRegions()) if(r.formatting?.fontRef) out.add(r.formatting.fontRef);
-    if(el.type === "group") for(const c of el.contents.toArray()) collectRefs(c, out);
+    if(el.type === "group") for(const c of el.contents.toArray()) collectTextRefs(c, out);
 }
 
 /**
@@ -193,7 +193,7 @@ export async function readLivePage(page : DesignEditing.AbsolutePage, fonts : Fo
     const els = page.elements.toArray();
 
     const refs = new Set<string>();
-    for(const el of els) collectRefs(el, refs);
+    for(const el of els) collectTextRefs(el, refs);
     const families = await fonts.familiesFor([...refs]);
 
     const style : StyleMap = {};

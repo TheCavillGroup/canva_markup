@@ -2,7 +2,8 @@ import { intrinsicWidths, layoutParagraphs, supportsFont, weightVisible, type Pa
 import { fmt } from "../css/mod.ts";
 import { isVisualBox } from "../parse/mod.ts";
 import { CAVILL, type Brand } from "../brand.ts";
-import type { ApplyWarning, Node, PageDoc, Paragraph, StyleMap, TextNode } from "../types.ts";
+import type { Node, PageDoc, Paragraph, StyleMap, TextNode } from "../types.ts";
+import type { ApplyWarning } from "./types.ts";
 import type { FontRegistry } from "./fonts.ts";
 
 // Lays the markup out in a hidden DOM inside the app iframe and measures every element.

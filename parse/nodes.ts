@@ -22,6 +22,17 @@ export function createNodeReader(cx : Reader) {
         return out;
     };
 
+    const finish = <T extends Node>(node : T, el : RawElement, path : string, id : string | undefined) : T => {
+        if(id) node.id = id;
+        if(readLocked(el, path)) node.locked = true;
+        return node;
+    }
+
+    const readMeasured = (node : TextNode, el : RawElement) => {
+        const mh = el.attrs["data-measured-height"];
+        if(mh != null && Number.isFinite(Number(mh))) node.measuredHeight = Number(mh);
+    }
+
     const readNode = (el : RawElement, ctx : Ctx) : Node | undefined => {
         const path = ctx.path;
         if(UNSUPPORTED_TAGS[el.tag] || !KNOWN_TAGS.has(el.tag)) {
@@ -33,9 +44,7 @@ export function createNodeReader(cx : Reader) {
         if(el.tag === "div") {
             const { style, text } = readStyle(el, path, BOX_STYLE);
             const id = readId(el, path);
-            const node : BoxNode = { kind: "box", path, style, children: readChildren(el, { ...ctx, text: { ...ctx.text, ...text } }) };
-            if(id) node.id = id;
-            if(readLocked(el, path)) node.locked = true;
+            const node = finish<BoxNode>({ kind: "box", path, style, children: readChildren(el, { ...ctx, text: { ...ctx.text, ...text } }) }, el, path, id);
             if(id && !isVisualBox(node)) {
                 add("invalid_id", path, `<div data-id="${id}"> has no background or border, so it isn't a Canva element.`, { dataId: id, fix: "Keep a background-color/background-image/border, or delete the element by removing it from the markup." });
             }
@@ -48,9 +57,7 @@ export function createNodeReader(cx : Reader) {
             }
             const { style, text } = readStyle(el, path, GROUP_STYLE);
             const id = readId(el, path);
-            const node : GroupNode = { kind: "group", path, style, children: readChildren(el, { ...ctx, text: { ...ctx.text, ...text }, inGroup: true }) };
-            if(id) node.id = id;
-            if(readLocked(el, path)) node.locked = true;
+            const node = finish<GroupNode>({ kind: "group", path, style, children: readChildren(el, { ...ctx, text: { ...ctx.text, ...text }, inGroup: true }) }, el, path, id);
             if(countElements(node.children) < 2) add("invalid_nesting", path, "A group needs at least 2 elements.", { dataId: id, fix: "Add elements, or remove the <group> wrapper." });
             return node;
         }
@@ -58,11 +65,8 @@ export function createNodeReader(cx : Reader) {
         if(el.tag === "text") {
             const { style, text } = readStyle(el, path, TEXT_BOX_STYLE);
             const id = readId(el, path);
-            const node : TextNode = { kind: "text", path, style, paragraphs: readBlocks(el, { ...ctx.text, ...text }, path) };
-            if(id) node.id = id;
-            if(readLocked(el, path)) node.locked = true;
-            const mh = el.attrs["data-measured-height"];
-            if(mh != null && Number.isFinite(Number(mh))) node.measuredHeight = Number(mh);
+            const node = finish<TextNode>({ kind: "text", path, style, paragraphs: readBlocks(el, { ...ctx.text, ...text }, path) }, el, path, id);
+            readMeasured(node, el);
             if(node.paragraphs.length === 0) add("invalid_nesting", path, "<text> is empty.", { dataId: id, fix: "Add a <p>, or remove the element." });
             return node;
         }
@@ -78,11 +82,8 @@ export function createNodeReader(cx : Reader) {
                 style = r.item;
                 paragraphs = [r.para];
             }
-            const node : TextNode = { kind: "text", path, style, paragraphs };
-            if(id) node.id = id;
-            if(readLocked(el, path)) node.locked = true;
-            const mh = el.attrs["data-measured-height"];
-            if(mh != null && Number.isFinite(Number(mh))) node.measuredHeight = Number(mh);
+            const node = finish<TextNode>({ kind: "text", path, style, paragraphs }, el, path, id);
+            readMeasured(node, el);
             return node;
         }
 
@@ -97,10 +98,8 @@ export function createNodeReader(cx : Reader) {
             }
             const sized = ["width", "height", "aspect-ratio"].filter(k => style[k] != null && style[k] !== "auto").length;
             if(sized < 2) add("missing_attribute", path, "<img> needs a definite size.", { dataId: id, property: "width", fix: "Give width and height, or one of them plus aspect-ratio." });
-            const node : ImageNode = { kind: "image", path, style, src: src ?? "" };
-            if(id) node.id = id;
+            const node = finish<ImageNode>({ kind: "image", path, style, src: src ?? "" }, el, path, id);
             if(el.attrs.alt != null) node.alt = el.attrs.alt;
-            if(readLocked(el, path)) node.locked = true;
             if(el.children.length) add("invalid_nesting", path, "<img> can't have children.");
             return node;
         }
@@ -117,15 +116,10 @@ export function createNodeReader(cx : Reader) {
             if(el.tag === "canva-embed") {
                 const src = el.attrs.src ?? "";
                 if(!/^https:\/\/\S+$/.test(src)) add("invalid_value", path, "Embed src must be the https URL from get_page.", { dataId: id, property: "src" });
-                const node : EmbedNode = { kind: "embed", path, style, src };
-                if(id) node.id = id;
-                if(readLocked(el, path)) node.locked = true;
-                return node;
+                return finish<EmbedNode>({ kind: "embed", path, style, src }, el, path, id);
             }
-            const node : PlaceholderNode = { kind: "unsupported", path, style };
-            if(id) node.id = id;
+            const node = finish<PlaceholderNode>({ kind: "unsupported", path, style }, el, path, id);
             if(el.attrs["data-kind"]) node.detail = el.attrs["data-kind"];
-            if(readLocked(el, path)) node.locked = true;
             return node;
         }
 

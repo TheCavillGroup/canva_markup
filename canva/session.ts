@@ -3,8 +3,11 @@ import { addPage as canvaAddPage, getCurrentPageMetadata, getDesignMetadata, ope
 import { CAVILL, assertBrand, type Brand } from "../brand.ts";
 import { parsePage } from "../parse/mod.ts";
 import { isTemplate, type TemplateResult } from "../template.ts";
-import type { ApplyWarning, ElementResult, PageDoc, PageSummary } from "../types.ts";
-import { collectSources, conflictsWithLive, differences, executeApply, type Settled } from "./apply.ts";
+import type { PageDoc } from "../types.ts";
+import type { ApplyWarning, ElementResult, PageSummary } from "./types.ts";
+import { conflictsWithLive, executeApply, type Settled } from "./apply.ts";
+import { collectSources } from "./convert.ts";
+import { differences } from "./compare.ts";
 import { reconcileError } from "./errors.ts";
 import { createFontRegistry, type FontRegistry } from "./fonts.ts";
 import { createIdRegistry, walk, type IdRegistry } from "./ids.ts";

@@ -15,8 +15,6 @@ export interface BrandFont {
 }
 
 export interface Brand {
-    /** Shown in the spec, e.g. "The Cavill Group" */
-    name? : string;
     /** alias → font. Aliases look like `brand-…` */
     fonts : Readonly<Record<string, BrandFont>>;
     /** colour name → #rrggbb. Names look like `brand-…` */
@@ -29,7 +27,6 @@ export interface Brand {
 
 /** The Cavill Group: the default brand everywhere a brand is optional */
 export const CAVILL : Brand = {
-    name: "The Cavill Group",
     fonts: {
         "brand-headline": { ref: "YAF209YF8M8:0", family: "Safira March", weights: ["thin", "medium"], description: "Safira March (Cavill Group headings)" },
         "brand-body": { ref: "YADK4LSvvyE:0", family: "Questrial", weights: ["normal"], description: "Questrial (Cavill Group body)" },
@@ -75,45 +72,11 @@ export function assertBrand(brand : Brand) : Brand {
     return brand;
 }
 
-/** The family a paragraph's fontFamily measures as: the alias's family, else the name itself */
-export function fontFamilyOf(brand : Brand, fontFamily : string) : string {
-    return brand.fonts[fontFamily]?.family ?? fontFamily;
-}
-
-/** alias → fontRef and fontRef → alias lookups */
-export function fontRefs(brand : Brand) : { byAlias : Map<string, string>, byRef : Map<string, string> } {
-    const byAlias = new Map<string, string>(), byRef = new Map<string, string>();
+/** fontRef → alias lookup */
+export function fontRefs(brand : Brand) : { byRef : Map<string, string> } {
+    const byRef = new Map<string, string>();
     for(const [alias, f] of Object.entries(brand.fonts)) {
-        byAlias.set(alias, f.ref);
         if(!byRef.has(f.ref)) byRef.set(f.ref, alias);
     }
-    return { byAlias, byRef };
-}
-
-function weightNote(f : BrandFont) : string {
-    const w = f.weights;
-    if(!w?.length) return "";
-    if(w.length === 1 && w[0] === "normal") return "Normal only: bold looks the same";
-    return `Weights: ${w.join(", ")}`;
-}
-
-/** Markdown for the brand-specific parts of the spec, keyed by the placeholder they replace */
-export function brandSpec(brand : Brand) : Record<"fonts" | "colors" | "default-font" | "heading-font", string> {
-    const fonts = Object.entries(brand.fonts).map(([alias, f]) => `| \`${alias}\` | ${[f.description ?? f.family, weightNote(f)].filter(x => x).join(". ")} |`);
-    const colors = Object.entries(brand.colors).map(([name, hex]) => `| \`${name}\` | \`${hex}\` |`);
-    return {
-        fonts: fonts.join("\n"),
-        colors: colors.length ? colors.join("\n") : "| (none) | |",
-        "default-font": brand.defaultFont,
-        "heading-font": brand.headingFont
-    };
-}
-
-/** Fills the `<!-- brand:… -->` placeholders in a spec (docs/MARKUP.md) for this brand */
-export function renderSpec(spec : string, brand : Brand = CAVILL) : string {
-    const parts = brandSpec(brand) as Record<string, string>;
-    // A placeholder alone on a line takes the whole line, so an empty table section leaves no blank row
-    return spec
-        .replace(/^<!-- brand:([a-z-]+) -->\r?\n/gm, (m, k : string) => k in parts ? (parts[k] ? `${parts[k]}\n` : "") : m)
-        .replace(/<!-- brand:([a-z-]+) -->/g, (m, k : string) => parts[k] ?? m);
+    return { byRef };
 }

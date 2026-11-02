@@ -1,24 +1,23 @@
 import type { FontRef, ImageRef } from "@canva/asset";
-import type { DesignEditing, InlineFormatting, RichtextFormatting, TextRegion } from "@canva/design";
-import { fmt } from "../css/mod.ts";
-import { DEFAULT_INLINE, parsePage } from "../parse/mod.ts";
+import type { DesignEditing } from "@canva/design";
+import { parsePage } from "../parse/mod.ts";
 import { serialisePage } from "../serialise.ts";
 import { checkAgainstBase } from "../base.ts";
 import type { Brand } from "../brand.ts";
-import type { ApplyWarning, ElementResult, Issue, Node, PageDoc, Paragraph, StyleMap } from "../types.ts";
+import type { Issue, Node, PageDoc, Paragraph, StyleMap } from "../types.ts";
+import type { ApplyWarning, ElementResult } from "./types.ts";
 import { reconcileError } from "./errors.ts";
 import type { FontRegistry } from "./fonts.ts";
-import { walk, type IdRegistry } from "./ids.ts";
+import type { IdRegistry } from "./ids.ts";
 import type { PlanItem } from "./layout.ts";
-import { plannedText, snapshotNode, type LiveEntry, type LiveRead } from "./read.ts";
+import { collectTextRefs, plannedText, snapshotNode, type LiveEntry, type LiveRead } from "./read.ts";
 import { noTrace, type Trace } from "./trace.ts";
+import { bgImage, border, canvaKind, liveKind, paragraphOf, radii, regions, roundedPath, type El } from "./convert.ts";
+import { near, sameSize } from "./compare.ts";
 
 // The diff: stages every change to a live page on Canva's snapshot, so the caller's single sync() is one undo step.
 // Only Canva *types* are imported here; the session (openDesign, sync, uploads) lives in session.ts.
 
-type El = DesignEditing.AbsoluteElement | DesignEditing.GroupContentElement;
-type Builder = DesignEditing.ElementStateBuilder;
-type CanvaKind = "rect" | "shape" | "text" | "embed" | "group" | "unsupported";
 
 export interface ApplyDeps {
     fonts : FontRegistry,
@@ -26,123 +25,9 @@ export interface ApplyDeps {
     trace? : Trace
 }
 
-const EPS = 0.011;
-const near = (a : number, b : number) => Math.abs(a - b) < EPS;
-// Browser layout rounds to 1/64px, so a laid-out stack can come out a few hundredths off: recreating a box for that would lose its Canva-only effects. Text widths stay exact (they decide line breaks)
-const SIZE_EPS = 0.1;
-const sameSize = (a : number, b : number) => Math.abs(a - b) < SIZE_EPS;
 
-// --- helpers over plan nodes ---
 
-function radii(s : StyleMap) : Array<string> | undefined {
-    const r = s["border-radius"];
-    if(!r) return;
-    const parts = r.split(" ");
-    if(parts.every(p => parseFloat(p) === 0)) return;
-    const [a, b = a, c = a, d = b] = parts as [string, string?, string?, string?];
-    return [a, b!, c!, d!];
-}
 
-function canvaKind(n : Node) : CanvaKind {
-    if(n.kind === "box" || n.kind === "image") return radii(n.style) ? "shape" : "rect";
-    if(n.kind === "shape") return "shape";
-    return n.kind;
-}
-
-function liveKind(el : El) : CanvaKind {
-    return el.type as CanvaKind;
-}
-
-/** Rounded rectangle path (CSS border-radius semantics: % per axis, radii scaled down to fit). */
-export function roundedPath(w : number, h : number, r : Array<string>) : string {
-    const ax = (v : string, size : number) => v.endsWith("%") ? parseFloat(v) / 100 * size : parseFloat(v);
-    let c = r.map(v => [ax(v, w), ax(v, h)] as [number, number]);
-    const f = Math.min(1, w / (c[0]![0] + c[1]![0] || 1), w / (c[3]![0] + c[2]![0] || 1), h / (c[0]![1] + c[3]![1] || 1), h / (c[1]![1] + c[2]![1] || 1));
-    c = c.map(([x, y]) => [x * f, y * f] as [number, number]);
-    const [tl, tr, br, bl] = c as [[number, number], [number, number], [number, number], [number, number]];
-    const n = (v : number) => fmt(v, 3);
-    const arc = ([rx, ry] : [number, number], x : number, y : number) => rx > 0 && ry > 0 ? ` A${n(rx)} ${n(ry)} 0 0 1 ${n(x)} ${n(y)}` : ` L${n(x)} ${n(y)}`;
-    return `M${n(tl[0])} 0 H${n(w - tr[0])}${arc(tr, w, tr[1])} V${n(h - br[1])}${arc(br, w - br[0], h)} H${n(bl[0])}${arc(bl, 0, h - bl[1])} V${n(tl[1])}${arc(tl, tl[0], 0)} Z`;
-}
-
-const bgImage = (s : StyleMap) => /^url\("(.*)"\)$/.exec(s["background-image"] ?? "")?.[1];
-
-function border(s : StyleMap) : { weight : number, color : string } | undefined {
-    const m = /^([\d.]+)px solid (#[0-9a-f]{6})$/.exec(s.border ?? "");
-    return m ? { weight: Number(m[1]), color: m[2]! } : undefined;
-}
-
-function inlineOf(f : Paragraph["runs"][number]["format"]) : InlineFormatting {
-    const o : InlineFormatting = { color: f.color, fontWeight: f.fontWeight, fontStyle: f.fontStyle, decoration: f.decoration, strikethrough: f.strikethrough };
-    if(f.link) o.link = f.link;
-    return o;
-}
-
-function paragraphOf(p : Paragraph, fontRefs : Map<string, FontRef>) : RichtextFormatting {
-    const f = p.format;
-    const o : RichtextFormatting = { fontRef: fontRefs.get(f.fontFamily), fontSize: f.fontSize, textAlign: f.textAlign, lineHeightEm: f.lineHeight, letterSpacingEm: f.letterSpacing, listLevel: f.listLevel };
-    if(f.listLevel > 0) o.listMarker = f.listMarker;
-    return o;
-}
-
-function regions(paragraphs : Array<Paragraph>, fontRefs : Map<string, FontRef>) : Array<TextRegion> {
-    const out : Array<TextRegion> = [];
-    paragraphs.forEach((p, i) => {
-        const pf = paragraphOf(p, fontRefs);
-        const runs = p.runs.length ? p.runs : [{ text: "", format: DEFAULT_INLINE }];
-        runs.forEach((r, k) => {
-            const text = r.text + (k === runs.length - 1 && i < paragraphs.length - 1 ? "\n" : "");
-            if(text) out.push({ text, formatting: { ...pf, ...inlineOf(r.format) } });
-        });
-    });
-    return out.length ? out : [{ text: " ", formatting: paragraphOf(paragraphs[0]!, fontRefs) }];
-}
-
-/** Every image src a doc uses: <img>, box backgrounds, the page background and shape fill-images */
-export function collectSources(doc : PageDoc) : Set<string> {
-    const out = new Set<string>();
-    const fromStyle = (s : StyleMap) => {
-        const u = bgImage(s);
-        if(u) out.add(u);
-    };
-    fromStyle(doc.style);
-    walk(doc.children, n => {
-        if(n.kind === "image") out.add(n.src);
-        if(n.kind === "box") fromStyle(n.style);
-        if(n.kind === "shape") for(const p of n.paths) if(p.fillImage) out.add(p.fillImage);
-    });
-    return out;
-}
-
-const FORMAT_CSS : Record<keyof Paragraph["format"], string> = { fontFamily: "font-family", fontSize: "font-size", textAlign: "text-align", lineHeight: "line-height", letterSpacing: "letter-spacing", listLevel: "list level", listMarker: "list-style-type" };
-
-/** What Canva changed between the state the applier staged and the re-read. Groups are skipped: Canva re-fits them to their members. */
-export function differences(want : Node, got : Node) : Array<string> {
-    if(want.kind === "group") return [];
-    if(want.kind !== got.kind) return [`became a ${got.kind}`];
-    const out : Array<string> = [];
-    for(const k of new Set([...Object.keys(want.style), ...Object.keys(got.style)])) {
-        const a = want.style[k], b = got.style[k];
-        if(a === b) continue;
-        if(a?.endsWith("px") && b?.endsWith("px") && near(parseFloat(a), parseFloat(b))) continue;
-        out.push(`${k} ${a ?? "(none)"} → ${b ?? "(none)"}`);
-    }
-    if(want.kind === "text" && got.kind === "text") {
-        if(want.paragraphs.length !== got.paragraphs.length) {
-            out.push(`${want.paragraphs.length} paragraphs → ${got.paragraphs.length}`);
-        } else {
-            want.paragraphs.forEach((p, i) => {
-                const q = got.paragraphs[i]!;
-                for(const k in FORMAT_CSS) {
-                    const key = k as keyof Paragraph["format"];
-                    if(p.format[key] !== q.format[key]) out.push(`paragraph ${i + 1} ${FORMAT_CSS[key]} ${p.format[key]} → ${q.format[key]}`);
-                }
-                if(p.runs.map(r => r.text).join("") !== q.runs.map(r => r.text).join("")) out.push(`paragraph ${i + 1} text`);
-            });
-        }
-    }
-    return out;
-}
 
 /** How the applier left the page: pre-order ids for the re-read, and what each touched element should read back as. */
 export interface Settled {
@@ -516,9 +401,4 @@ export async function executeApply(page : DesignEditing.AbsolutePage, helpers : 
 function liveIdOf(live : LiveRead, el : DesignEditing.GroupElement) : string {
     for(const [id, e] of live.entries) if(e.el === el) return id;
     return "";
-}
-
-function collectTextRefs(el : El, out : Set<string>) {
-    if(el.type === "text") for(const r of el.text.readTextRegions()) if(r.formatting?.fontRef) out.add(r.formatting.fontRef);
-    if(el.type === "group") for(const c of el.contents.toArray()) collectTextRefs(c, out);
 }

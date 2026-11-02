@@ -1,5 +1,5 @@
 import { assert, assertAlmostEquals, assertEquals } from "@std/assert";
-import { toAbsoluteCubic, tokenisePath } from "../mod.ts";
+import { toAbsoluteCubic, tokenisePath } from "../parse/path.ts";
 
 type Pt = [number, number];
 

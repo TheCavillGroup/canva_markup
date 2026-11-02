@@ -4,9 +4,9 @@
  * and usually a fix), serialises back to canonical markup, and checks an edit against the page it was
  * based on.
  *
- * Font aliases and colour names come from a {@link Brand}: the plain exports use {@link CAVILL}, and
- * {@link createMarkup} binds everything to another brand. Plain TS with no Deno or DOM globals, so it
- * runs in a browser bundle too.
+ * Font aliases and colour names come from a {@link Brand}: every function takes one as its last
+ * argument and defaults to {@link CAVILL}. Plain TS with no Deno or DOM globals, so it runs in a
+ * browser bundle too.
  *
  * Build markup with the {@link html} tag: it escapes listing data, takes style objects, and renders parsed
  * nodes back with their data-ids.
@@ -29,11 +29,9 @@
  * @module
  */
 export * from "./types.ts";
-export { CAVILL, assertBrand, brandProblems, brandSpec, renderSpec, fontFamilyOf, fontRefs, type Brand, type BrandFont } from "./brand.ts";
-export { createMarkup, type Markup } from "./markup.ts";
-export { html, raw, createHtml, isTemplate, styleString, type TemplateResult, type TemplateValue, type StyleObject, type HtmlTag } from "./template.ts";
-export { parsePage, paragraphDefaults, DEFAULT_INLINE, DEFAULT_PARAGRAPH, isVisualBox, countElements, sameInline, PAGE_MIN, PAGE_MAX, PAGE_MAX_AREA } from "./parse/mod.ts";
-export { serialisePage, serialiseNode, fontFamilyCss } from "./serialise.ts";
-export { checkAgainstBase, flattenIds, type FlatNode } from "./base.ts";
-export { checkSrc, fmt, type Problem } from "./css/mod.ts";
-export { tokenisePath, toAbsoluteCubic, MAX_PATHS, MAX_PATH_BYTES, MAX_FILL_COLORS, type PathSegment } from "./path.ts";
+export { CAVILL, assertBrand, brandProblems, type Brand, type BrandFont } from "./brand.ts";
+export { renderSpec } from "./spec.ts";
+export { html, raw, isTemplate, type TemplateResult, type TemplateValue, type StyleObject, type HtmlTag } from "./template.ts";
+export { parsePage } from "./parse/mod.ts";
+export { serialisePage } from "./serialise.ts";
+export { checkAgainstBase } from "./base.ts";

@@ -1,6 +1,6 @@
 import type { RawElement } from "./html.ts";
 import { checkSrc, fmt, isProblem, normColor, ITEM_PROPS } from "../css/mod.ts";
-import { byteLength, MAX_FILL_COLORS, MAX_PATH_BYTES, MAX_PATHS, toAbsoluteCubic, tokenisePath, usesQuadratic } from "../path.ts";
+import { byteLength, MAX_FILL_COLORS, MAX_PATH_BYTES, MAX_PATHS, toAbsoluteCubic, tokenisePath, usesQuadratic } from "./path.ts";
 import type { Ctx, Reader } from "./reader.ts";
 import type { ShapeNode, ShapePath } from "../types.ts";
 

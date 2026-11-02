@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { ok, strip, wrap } from "./helpers.ts";
-import { CAVILL, createMarkup, html, isTemplate, parsePage, raw, serialisePage, styleString, type TextNode } from "../mod.ts";
+import { html, isTemplate, parsePage, raw, serialisePage, type TextNode } from "../mod.ts";
+import { styleString } from "../template.ts";
 
 const ABSOLUTE = `<page width="800" height="600" data-page-id="P1" data-revision="abc" style="background-color:#ffffff">
   <div data-id="r1" style="position:absolute; left:40px; top:40px; width:200px; height:120px; background-color:#c8a165"></div>
@@ -62,14 +63,6 @@ Deno.test("nodes and pages render as canonical markup and keep their data-ids", 
     assertEquals(next.children.map(x => x.id), ["r1", "u1", "t1"]);
     assertEquals((next.children[2] as TextNode).paragraphs[0].runs[0].text, "Open Sunday & Monday");
     assertEquals(serialisePage({ ...next, children: next.children.slice(0, 2) }), serialisePage({ ...base, children: [box, placeholder] }));
-});
-
-Deno.test("m.html serialises nodes with its own brand", () => {
-    const m = createMarkup({ ...CAVILL, fonts: { ...CAVILL.fonts, "brand-title": { ref: "YAF209YF8M8:0", family: "Safira March" } } });
-    const doc = m.parsePage(m.html`<page width="800" height="600"><p style=${{ fontFamily: "brand-title" }}>Hi</p></page>`).doc!;
-    assert(m.html`${doc.children[0]}`.markup.includes("font-family:brand-title"));
-    // CAVILL has no brand-title alias, so it quotes it like a library font
-    assert(html`${doc.children[0]}`.markup.includes("font-family:&quot;brand-title&quot;"));
 });
 
 Deno.test("parsePage takes a template", () => {

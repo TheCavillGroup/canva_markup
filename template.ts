@@ -1,4 +1,3 @@
-import { CAVILL, type Brand } from "./brand.ts";
 import { escapeAttr, serialiseNode, serialisePage } from "./serialise.ts";
 import type { Node, PageDoc } from "./types.ts";
 
@@ -57,31 +56,15 @@ export function styleString(style : StyleObject) : string {
     return out.join("; ");
 }
 
-/**
- * An {@link html} tag whose nodes serialise with `brand` (aliases and colour names stay as the brand's names).
- * {@link createMarkup} gives you one as `m.html`.
- */
-export function createHtml(brand : Brand = CAVILL) : HtmlTag {
-    function render(v : TemplateValue) : string {
-        if(v == null || typeof v === "boolean") return "";
-        if(typeof v === "string") return escape(v);
-        if(typeof v === "number") return String(v);
-        if(isTemplate(v)) return v.markup;
-        if(Array.isArray(v)) return v.map(render).join("");
-        if(isPageDoc(v as object)) return serialisePage(v as PageDoc, brand);
-        if(isNode(v as object)) return serialiseNode(v as Node, brand);
-        return escape(styleString(v as StyleObject));
-    }
-
-    return (strings, ...values) => {
-        let out = strings[0];
-        for(let i = 0; i < values.length; i++) {
-            const v = render(values[i]);
-            // attr=${x} without quotes gets them, so styles with spaces stay one attribute
-            out += (/=\s*$/.test(strings[i]) ? `"${v}"` : v) + strings[i + 1];
-        }
-        return template(out);
-    };
+function render(v : TemplateValue) : string {
+    if(v == null || typeof v === "boolean") return "";
+    if(typeof v === "string") return escape(v);
+    if(typeof v === "number") return String(v);
+    if(isTemplate(v)) return v.markup;
+    if(Array.isArray(v)) return v.map(render).join("");
+    if(isPageDoc(v as object)) return serialisePage(v as PageDoc);
+    if(isNode(v as object)) return serialiseNode(v as Node);
+    return escape(styleString(v as StyleObject));
 }
 
 /**
@@ -106,4 +89,12 @@ export function createHtml(brand : Brand = CAVILL) : HtmlTag {
  * parsePage(page);
  * ```
  */
-export const html : HtmlTag = createHtml(CAVILL);
+export const html : HtmlTag = (strings, ...values) => {
+    let out = strings[0];
+    for(let i = 0; i < values.length; i++) {
+        const v = render(values[i]);
+        // attr=${x} without quotes gets them, so styles with spaces stay one attribute
+        out += (/=\s*$/.test(strings[i]) ? `"${v}"` : v) + strings[i + 1];
+    }
+    return template(out);
+};

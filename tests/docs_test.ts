@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import { CAVILL, createMarkup, ISSUE_CODES, parsePage, renderSpec } from "../mod.ts";
+import { CAVILL, ISSUE_CODES, parsePage, renderSpec } from "../mod.ts";
 
 // Every complete <page> example in docs/MARKUP.md must validate, so the spec can't drift from the code.
 // Line endings are normalised: checkouts with core.autocrlf get CRLF.
@@ -38,8 +38,7 @@ Deno.test("MARKUP.md placeholders are all filled", () => {
 });
 
 Deno.test("MARKUP.md renders for another brand", () => {
-    const m = createMarkup({ fonts: {}, colors: {}, defaultFont: "Lato", headingFont: "Montserrat" });
-    const out = m.renderSpec(raw);
+    const out = renderSpec(raw, { fonts: {}, colors: {}, defaultFont: "Lato", headingFont: "Montserrat" });
     assert(!out.includes("brand-headline` |"));
     assert(out.includes("`font-family: Lato`"));
     assert(out.includes("| (none) | |"));

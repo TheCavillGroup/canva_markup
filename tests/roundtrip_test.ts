@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { ok, strip } from "./helpers.ts";
-import { DEFAULT_INLINE, DEFAULT_PARAGRAPH, parsePage, serialisePage } from "../mod.ts";
+import { parsePage, serialisePage } from "../mod.ts";
+import { DEFAULT_INLINE, DEFAULT_PARAGRAPH } from "../parse/format.ts";
 import type { InlineFormat, PageDoc, Paragraph } from "../mod.ts";
 
 const FIXTURES : Record<string, string> = {

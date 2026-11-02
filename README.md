@@ -43,19 +43,18 @@ Full read → build → apply walkthroughs are in [docs/EXAMPLES.md](docs/EXAMPL
 
 ## Brands
 
-Font aliases (`brand-headline`) and colour names (`brand-text-blue`) come from a `Brand`. The plain exports use `CAVILL`. For another brand, use `createMarkup`:
+Font aliases (`brand-headline`) and colour names (`brand-text-blue`) come from a `Brand`. Every function takes a `Brand` as its last argument and defaults to `CAVILL`:
 
 ```ts
-import { CAVILL, createMarkup } from "@thecavillgroup/canva-markup";
+import { assertBrand, parsePage } from "@thecavillgroup/canva-markup";
 
-const m = createMarkup({
-    name: "Acme",
+const brand = assertBrand({
     fonts: { "brand-title": { ref: "YAF209YF8M8:0", family: "Safira March" } },
     colors: { "brand-sand": "#e8dcc8" },
     defaultFont: "Lato",
     headingFont: "brand-title"
 });
-m.parsePage(`<page width="800" height="600" style="background-color:brand-sand"><h1>Hi</h1></page>`);
+parsePage(`<page width="800" height="600" style="background-color:brand-sand"><h1>Hi</h1></page>`, brand);
 ```
 
 Aliases and colour names must look like `brand-<name>`. The spec in [docs/MARKUP.md](docs/MARKUP.md) has `<!-- brand:… -->` placeholders. Fill them with `renderSpec(spec, brand)` before showing the spec to anyone.
@@ -86,6 +85,6 @@ console.log(res.results, res.warnings, serialisePage(res.doc));
   3. diffs by `data-id`, and makes one `sync()`, so the edit is one undo step in Canva
 - **After applying.** The page is re-read. `res.doc` is what Canva actually stored, with a `canva_changed` warning where that differs from what was sent.
 - **Errors.** Failures throw `ReconcileError` with a `code` such as `stale_revision`, `validation_failed`, `font_unavailable`, `asset_failed` or `not_supported`.
-- **Fakes.** The lower-level pieces take Canva objects as arguments, so they run with fakes (see `tests/canva/`): `executeApply`, `readLivePage`, `conflictsWithLive`, `differences`, `layout`, and the id and font registries.
+- **Fakes.** The lower-level pieces (`executeApply`, `readLivePage`, `layout`, the id and font registries) take Canva objects as arguments, so they run with fakes (see `tests/canva/`). They aren't exported; import them from the source files.
 
 `./canva` needs the Canva Apps SDK runtime (`@canva/design` 2.13.2-beta.0 and `@canva/asset`; keep the app on the same `@canva/design` version) and a browser DOM.

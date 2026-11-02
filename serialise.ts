@@ -1,5 +1,5 @@
 import { fmt, serialiseStyle } from "./css/mod.ts";
-import { DEFAULT_INLINE, paragraphDefaults } from "./parse/mod.ts";
+import { DEFAULT_INLINE, paragraphDefaults } from "./parse/format.ts";
 import { CAVILL, type Brand } from "./brand.ts";
 import type { InlineFormat, Node, PageDoc, Paragraph, Run, StyleMap } from "./types.ts";
 

@@ -1,8 +1,6 @@
 // Normalised page model produced by the parser and consumed by the serialiser and base checks.
 // Plain TS only: no Deno or DOM globals, so a browser bundle can import it directly.
 
-import { CAVILL } from "./brand.ts";
-
 /** Every code an {@link Issue} can carry */
 export const ISSUE_CODES = [
     "parse_error",
@@ -60,14 +58,6 @@ export type TextAlign = (typeof TEXT_ALIGNS)[number];
 
 export const LIST_MARKERS = ["none", "disc", "circle", "square", "decimal", "lower-alpha", "lower-roman", "checked", "unchecked"] as const;
 export type ListMarker = (typeof LIST_MARKERS)[number];
-
-/** @deprecated Use `Object.keys(CAVILL.fonts)`, or the aliases of your own brand */
-export const FONT_ALIASES : ReadonlyArray<string> = Object.keys(CAVILL.fonts);
-
-/** @deprecated Use `CAVILL.colors`, or the colours of your own brand */
-export const BRAND_COLORS : Record<string, string> = { ...CAVILL.colors };
-/** @deprecated Aliases come from a brand */
-export type FontAlias = string;
 
 export interface InlineFormat {
     color : string;
@@ -170,39 +160,4 @@ export interface PageDoc {
 export interface ParseResult {
     doc? : PageDoc;
     issues : Array<Issue>;
-}
-
-/** What applying a page did to one element */
-export type ApplyAction = "created" | "updated" | "replaced" | "moved" | "deleted" | "unchanged";
-export const APPLY_ACTIONS : ReadonlyArray<ApplyAction> = ["created", "updated", "replaced", "moved", "deleted", "unchanged"];
-
-export interface ElementResult {
-    action : ApplyAction,
-    /** node path in the applied markup ("" for deletions) */
-    path : string,
-    /** data-id of an existing element */
-    id? : string,
-    /** data-id minted for a created element */
-    newId? : string,
-    warning? : string
-}
-
-/** Something the apply did that the markup author should know (e.g. "font_weight", "canva_changed") */
-export interface ApplyWarning {
-    code : string,
-    message : string,
-    path? : string,
-    dataId? : string
-}
-
-/** One page of a design, as a Canva app sees it */
-export interface PageSummary {
-    index : number,
-    /** missing for pages apps can't use (e.g. Canva Docs pages) */
-    id? : string,
-    title? : string,
-    width? : number,
-    height? : number,
-    /** the page the user is on */
-    current : boolean
 }

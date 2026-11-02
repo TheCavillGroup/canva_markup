@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { ok } from "./helpers.ts";
-import { checkAgainstBase, flattenIds } from "../mod.ts";
+import { checkAgainstBase } from "../mod.ts";
+import { flattenIds } from "../base.ts";
 
 const BASE = `<page width="800" height="600" data-page-id="PB1" data-revision="aaaa">
   <div data-id="r1" style="position:absolute; left:0px; top:0px; width:100px; height:100px; background-color:#000000"></div>

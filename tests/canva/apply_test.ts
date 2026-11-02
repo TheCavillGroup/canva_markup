@@ -1,7 +1,10 @@
 // deno-lint-ignore-file no-explicit-any
 import { assert, assertEquals, assertRejects } from "@std/assert";
-import { CAVILL, parsePage, serialisePage, type ElementResult, type ApplyWarning, type TextNode } from "../../mod.ts";
-import { conflictsWithLive, differences, executeApply, roundedPath, type Settled } from "../../canva/apply.ts";
+import { CAVILL, parsePage, serialisePage, type TextNode } from "../../mod.ts";
+import type { ElementResult, ApplyWarning } from "../../canva/types.ts";
+import { conflictsWithLive, executeApply, type Settled } from "../../canva/apply.ts";
+import { roundedPath } from "../../canva/convert.ts";
+import { differences } from "../../canva/compare.ts";
 import { ReconcileError } from "../../canva/errors.ts";
 import { createFontRegistry } from "../../canva/fonts.ts";
 import { createIdRegistry, fingerprint } from "../../canva/ids.ts";
